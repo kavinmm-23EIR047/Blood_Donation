@@ -3,6 +3,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import multer from 'multer';
 import dotenv from 'dotenv';
+import sharp from 'sharp';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,12 +11,18 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Donor, BloodRequest, Event, HomepageContent, MediaAsset } from './models.js';
 
 const backendDirectory = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(backendDirectory, '.env') });
 dotenv.config({ path: resolve(backendDirectory, '../.env') });
 // Keep the local coordinator passcode in sync when the dev supervisor inherited an older environment.
-try {
-  const localPasscode = dotenv.parse(readFileSync(resolve(backendDirectory, '../.env'))).ADMIN_PASSCODE;
-  if (localPasscode) process.env.ADMIN_PASSCODE = localPasscode;
-} catch {}
+for (const envPath of [resolve(backendDirectory, '.env'), resolve(backendDirectory, '../.env')]) {
+  try {
+    const localPasscode = dotenv.parse(readFileSync(envPath)).ADMIN_PASSCODE;
+    if (localPasscode) {
+      process.env.ADMIN_PASSCODE = localPasscode;
+      break;
+    }
+  } catch {}
+}
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
@@ -49,12 +56,56 @@ const apiEndpoints = [
   { group: 'Admin CRM', method: 'GET', path: '/api/homepage/content', access: 'Admin', purpose: 'Load editable homepage content.' },
   { group: 'Admin CRM', method: 'PUT', path: '/api/homepage/content', access: 'Admin', purpose: 'Save homepage text, sections, images, and contacts.' },
 ];
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000' }));
+const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:3000')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('This website origin is not allowed by the API CORS settings.'));
+  },
+}));
 app.use(express.json({ limit: '1mb' }));
-const uploadImage = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: (_req, file, done) => {
+const uploadImage = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 }, fileFilter: (_req, file, done) => {
   if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.mimetype)) return done(new Error('Upload a JPG, PNG, WebP or GIF image.'));
   done(null, true);
 } });
+
+async function compressImageBuffer(buffer, mimetype, originalname = 'image.webp') {
+  // Preserve animated GIFs
+  if (mimetype === 'image/gif') {
+    return { data: buffer, contentType: 'image/gif', fileName: originalname.slice(0, 160) };
+  }
+  try {
+    // Auto-orient via EXIF, downscale extreme resolutions to max 1600px without upscaling,
+    // and encode into high-quality WebP (quality 85) for 75-90% size reduction with crisp fidelity.
+    const compressed = await sharp(buffer)
+      .rotate()
+      .resize({
+        width: 1600,
+        height: 1600,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({
+        quality: 85,
+        effort: 4,
+        smartSubsample: true,
+      })
+      .toBuffer();
+
+    const baseName = originalname.replace(/\.[^/.]+$/, '').slice(0, 150);
+    return {
+      data: compressed,
+      contentType: 'image/webp',
+      fileName: `${baseName}.webp`,
+    };
+  } catch (err) {
+    console.warn('Sharp compression fallback to original buffer:', err.message);
+    return { data: buffer, contentType: mimetype, fileName: originalname.slice(0, 160) };
+  }
+}
 
 function limitPublicWrites(req, res, next) {
   const now = Date.now(); const key = req.get('x-forwarded-for')?.split(',')[0]?.trim() || req.ip || req.socket.remoteAddress || 'unknown';
@@ -231,8 +282,22 @@ app.get('/api/public/media/:id', ensureDb, async (req, res, next) => {
 app.post('/api/media', requireAdmin, ensureDb, uploadImage.single('image'), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Choose an image to upload.' });
-    const asset = await MediaAsset.create({ fileName: req.file.originalname.slice(0, 160), contentType: req.file.mimetype, data: req.file.buffer });
-    res.status(201).json({ url: `/api/public/media/${asset._id}`, id: asset._id, fileName: asset.fileName });
+    const originalSize = req.file.buffer.length;
+    const { data, contentType, fileName } = await compressImageBuffer(req.file.buffer, req.file.mimetype, req.file.originalname);
+    const asset = await MediaAsset.create({
+      fileName,
+      contentType,
+      data,
+    });
+    const compressedSize = data.length;
+    res.status(201).json({
+      url: `/api/public/media/${asset._id}`,
+      id: asset._id,
+      fileName: asset.fileName,
+      originalSize,
+      compressedSize,
+      savings: originalSize > 0 ? `${Math.round((1 - compressedSize / originalSize) * 100)}%` : '0%',
+    });
   } catch (error) { next(error); }
 });
 
@@ -357,7 +422,7 @@ async function connectMongoWithRetry(delayMs = 5000) {
 
 const apiServer = app.listen(port);
 apiServer.on('listening', () => {
-  console.log(`Blood network API listening on http://localhost:${port}`);
+  console.log(`Blood network API listening on port ${port}`);
   if (process.env.MONGODB_URI) {
     connectMongoWithRetry();
   } else {

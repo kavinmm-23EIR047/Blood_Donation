@@ -1,7 +1,77 @@
+# ========================================================
+# GIT IGNORE CONFIGURATION - POONGURICHI BLOOD NETWORK
+# ========================================================
+
+# Dependencies
 node_modules/
-dist/
+.pnp/
+.pnp.js
+
+# Production and development build caches
 .next/
 .next-*/
+frontend/.next/
 frontend/.next-*/
+dist/
+build/
+out/
+
+# Environment files - NEVER commit secrets or credentials to git
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+backend/.env.local
+backend/.env.*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+*.env
+*.env.local
+
+# Preserve example environment templates
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+
+# Logs and debug traces
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Process IDs and runtime markers
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# OS metadata files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDE & Editor directories
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing, coverage and turborepo
+coverage/
+.nyc_output/
+.turbo/

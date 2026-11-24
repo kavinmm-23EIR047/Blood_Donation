@@ -383,7 +383,7 @@ function MediaImageField({ value, onChange, uploading, setUploading }) {
     } catch (uploadError) { setError(uploadError.message || 'Image upload failed.'); }
     finally { setBusy(false); event.target.value = ''; }
   }
-  return <div className="crm-image-upload">{value && <img src={value} alt="Uploaded image preview"/>}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={upload} disabled={isUploading}/><input aria-label="Image URL" value={value || ''} onChange={event => onChange(event.target.value)} placeholder="Or paste an image URL"/><small>{isUploading ? 'Uploading image…' : 'JPG, PNG, WebP or GIF · up to 5 MB · uploaded files are stored in MongoDB'}</small>{error && <small className="form-error">{error}</small>}</div>;
+  return <div className="crm-image-upload">{value && <img src={value} alt="Uploaded image preview"/>}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={upload} disabled={isUploading}/><input aria-label="Image URL" value={value || ''} onChange={event => onChange(event.target.value)} placeholder="Or paste an image URL"/><small>{isUploading ? 'Uploading & compressing image…' : 'JPG, PNG, WebP · Auto-compressed for crisp quality & fast loading'}</small>{error && <small className="form-error">{error}</small>}</div>;
 }
 
 function AdminLogin({ configured, onSuccess }) {

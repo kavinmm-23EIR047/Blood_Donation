@@ -215,6 +215,29 @@ function CommunityDonorCard({ donor, language }) {
   );
 }
 
+function CommunityPhotoCard({ item, language }) {
+  const [imgError, setImgError] = useState(false);
+  if (imgError || !item.image) return null;
+
+  return (
+    <article className="community-photo-card">
+      <img src={item.image} alt={item.title} loading="lazy" onError={() => setImgError(true)} />
+      <div className="community-photo-caption">
+        <small>{language === 'ta' ? 'சமூகத் தருணம்' : 'COMMUNITY MOMENT'}</small>
+        <b>{item.title}</b>
+      </div>
+    </article>
+  );
+}
+
+function CommunityFeaturePhoto({ image, title, label }) {
+  const [imgError, setImgError] = useState(false);
+  if (!image || imgError) {
+    return <div className="community-showcase-photo-placeholder"><PIcon name="people" size={42}/><span>{label}</span></div>;
+  }
+  return <img src={image} alt={title} onError={() => setImgError(true)} />;
+}
+
 function PublicEventCard({ event, language }) {
   const [imgError, setImgError] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -290,6 +313,7 @@ export default function PublicHome() {
   // Responsive Carousel & Auto-Slide Controls
   const capsuleCarousel = useCarousel(3, 3800);
   const servicesCarousel = useCarousel(6, 4200);
+  const eventsCarousel = useCarousel(Math.max(events.length, 1), 5200);
 
   const home = homepage || {};
   const c = home.translations?.[language] || {};
@@ -315,12 +339,31 @@ export default function PublicHome() {
   const eventImages = events.map(event => uniqueHomepageImage(event.image || images.events, [
     '/images/custom-community-clinic.png', '/images/custom-donation-vial.png', '/images/step-connect.svg', '/images/blood-donor-illustration.jpg',
   ]));
-  const communityImage = uniqueHomepageImage(images.community, ['/images/community-donor.jpg', '/images/custom-impact-heart.png', '/images/custom-community-clinic.png']);
-  const communityGalleryImages = [
-    uniqueHomepageImage(images.communityGalleryOne, ['/images/custom-community-clinic.png', '/images/blood-donor-illustration.jpg', '/images/custom-impact-heart.png']),
-    uniqueHomepageImage(images.communityGalleryTwo, ['/images/blood-donor-illustration.jpg', '/images/custom-impact-heart.png', '/images/donor-arm-bag.png']),
-    uniqueHomepageImage(images.communityGalleryThree, ['/images/custom-impact-heart.png', '/images/donor-arm-bag.png', '/images/hand-blood-drop.svg']),
+  const communityImage = uniqueHomepageImage(images.community, []);
+  const communityPhotoSlots = [
+    { key: 'communityGalleryOne', title: c.quickEventsTitle },
+    { key: 'communityGalleryTwo', title: c.quickDonorTitle },
+    { key: 'communityGalleryThree', title: c.community },
   ];
+  const seenCommunityPhotos = new Set([...usedHomepageImages].map(image => image.split('?')[0].toLowerCase()));
+  const communityGalleryItems = [
+    ...featuredDonors
+      .filter(donor => typeof donor.photo === 'string' && donor.photo.trim())
+      .map(donor => ({ type: 'donor', key: donor._id || donor.name, donor, image: donor.photo.trim() })),
+    ...communityPhotoSlots.flatMap(slot => {
+      const image = typeof images[slot.key] === 'string' ? images[slot.key].trim() : '';
+      const normalized = image.split('?')[0].toLowerCase();
+      if (!image || seenCommunityPhotos.has(normalized)) return [];
+      seenCommunityPhotos.add(normalized);
+      return [{ type: 'photo', key: slot.key, title: slot.title || c.community, image }];
+    }),
+  ].filter(item => {
+    const normalized = item.image.split('?')[0].toLowerCase();
+    if (seenCommunityPhotos.has(normalized) && item.type === 'donor') return false;
+    seenCommunityPhotos.add(normalized);
+    return true;
+  });
+  const communityCarousel = useCarousel(Math.max(communityGalleryItems.length, 1), 5600);
 
   const activeRequest = requests[0] || home.latestRequest || null;
   const activeEvent = events[0] || home.latestEvent || null;
@@ -410,7 +453,7 @@ export default function PublicHome() {
     { icon: 'calendar', title: c.quickEventsTitle, text: c.quickEventsCopy, href: '/events', tone: 'plum' },
   ];
 
-  if (!homepage) return <main className="public-site" aria-live="polite"><div className="homepage-load-state">{homepageError ? 'Homepage content is unavailable. Connect the content API and reload.' : 'Loading homepage content…'}</div></main>;
+  if (!homepage) return <main className="public-site" aria-live="polite"><section className="homepage-load-state"><span className="homepage-load-mark" aria-hidden="true">♥</span><p className="homepage-load-kicker">POONGURICHI NANBARGAL</p><h1>{homepageError ? 'We’re having trouble connecting.' : 'Loading the community homepage…'}</h1><p>{homepageError ? 'The live homepage could not reach its content service. Please try again in a moment.' : 'Please wait while we load the latest community updates.'}</p>{homepageError && <button type="button" onClick={() => window.location.reload()}>Try again</button>}</section></main>;
 
   return (
     <main className="public-site" lang={language}>
@@ -723,7 +766,7 @@ export default function PublicHome() {
           {quickAccessCards.map(card => (
             <a className="quick-access-card" key={card.title} href={card.href}>
               <span className={`quick-access-icon ${card.tone}`}><PIcon name={card.icon} size={22}/></span>
-              <b>{card.title}</b><small>{card.text}</small><span className="quick-access-arrow" aria-hidden="true">→</span>
+              <b>{card.title}</b><small>{card.text}</small><span className="quick-access-arrow" aria-hidden="true"><PIcon name="arrow" size={15} /></span>
             </a>
           ))}
         </div>
@@ -916,7 +959,7 @@ export default function PublicHome() {
           <span className="event-count-pill">{events.length}</span>
         </div>
         {events.length ? (
-          <div className="public-events-grid">
+          <div className={`public-events-grid ${events.length > 1 ? 'is-carousel' : ''}`} {...(events.length > 1 ? eventsCarousel.bindEvents : {})}>
             {events.map(event => (
               <PublicEventCard key={event._id || event.title} event={event} language={language} />
             ))}
@@ -927,6 +970,7 @@ export default function PublicHome() {
             <p>{c.eventsEmpty}</p>
           </div>
         )}
+        {events.length > 1 && <SwiperControls carousel={eventsCarousel} count={events.length} label={language === 'ta' ? 'நிகழ்வுகள்' : 'Events'} />}
       </section>
 
       {/* Interactive Feature 2: "Can I Donate?" Self-Assessment Checker */}
@@ -1156,7 +1200,7 @@ export default function PublicHome() {
         <div className="section-topline"><div><span className="section-kicker">{c.community}</span><h2 id="featured-community-title">{c.communityDonorTitle}</h2><p>{c.communityDonorCopy}</p></div><a className="community-showcase-link" href="/find-blood">{c.directory} <PIcon name="arrow" size={14}/></a></div>
         <div className="community-showcase-layout">
           <article className="community-showcase-feature">
-            <img src={communityImage} alt={c.communityDonorTitle || c.community}/>
+            <CommunityFeaturePhoto image={communityImage} title={c.communityDonorTitle || c.community} label={c.communityDonorTitle || c.community}/>
             <span className="community-showcase-overlay"><small>{language === 'ta' ? 'நமது சமூகத்தின் ஒரு பார்வை' : 'A LOOK INTO OUR COMMUNITY'}</small><b>{home.siteName || 'Poongurichi Nanbargal'}</b></span>
           </article>
           <div className="community-showcase-side">
@@ -1164,18 +1208,18 @@ export default function PublicHome() {
             <a className="community-showcase-cta" href="/become-donor">{c.joinFamily} <PIcon name="arrow" size={14}/></a>
           </div>
         </div>
-        <div className="community-gallery-heading"><span className="section-kicker">{language === 'ta' ? 'சமூகக் காட்சிகள்' : 'COMMUNITY GALLERY'}</span><span>{featuredDonors.length ? `${featuredDonors.length} ${language === 'ta' ? 'புகைப்படங்கள்' : 'photos'}` : (language === 'ta' ? 'புகைப்படங்கள் சேர்க்கப்படும்போது இங்கே தோன்றும்' : 'Photos will appear here as they are added')}</span></div>
-        {featuredDonors.length ? (
-          <div className="featured-donor-grid">
-            {featuredDonors.map(donor => (
-              <CommunityDonorCard key={donor._id || donor.name} donor={donor} language={language} />
-            ))}
+        <div className="community-gallery-heading"><span className="section-kicker">{language === 'ta' ? 'சமூகக் காட்சிகள்' : 'COMMUNITY GALLERY'}</span><span>{communityGalleryItems.length} {language === 'ta' ? 'புகைப்படங்கள்' : 'photos'}</span></div>
+        {communityGalleryItems.length ? (
+          <div className={`community-gallery-grid ${communityGalleryItems.length > 1 ? 'has-photos is-carousel' : 'single-photo'}`} {...(communityGalleryItems.length > 1 ? communityCarousel.bindEvents : {})}>
+            {communityGalleryItems.map(item => item.type === 'donor'
+              ? <CommunityDonorCard key={`donor-${item.key}`} donor={item.donor} language={language}/>
+              : <CommunityPhotoCard key={item.key} item={item} language={language}/>
+            )}
           </div>
-        ) : ( <div className="community-gallery-placeholders" aria-label={language === 'ta' ? 'சமூகப் புகைப்பட முன்னோட்டங்கள்' : 'Community photo placeholders'}>
-          <article className="community-placeholder-card"><img src={communityGalleryImages[0]} alt=""/><span><small>{language === 'ta' ? 'முன்னோட்டப் படம்' : 'IMAGE PREVIEW'}</small><b>{c.quickEventsTitle}</b></span></article>
-          <article className="community-placeholder-card"><img src={communityGalleryImages[1]} alt=""/><span><small>{language === 'ta' ? 'முன்னோட்டப் படம்' : 'IMAGE PREVIEW'}</small><b>{c.quickDonorTitle}</b></span></article>
-          <article className="community-placeholder-card"><img src={communityGalleryImages[2]} alt=""/><span><small>{language === 'ta' ? 'முன்னோட்டப் படம்' : 'IMAGE PREVIEW'}</small><b>{c.community}</b></span></article>
-        </div>)}
+        ) : (
+          <div className="community-gallery-empty"><span><PIcon name="people" size={22}/></span><div><b>{language === 'ta' ? 'சமூகப் புகைப்படங்கள் விரைவில்' : 'Community photos will appear here'}</b><p>{c.communityDonorCopy}</p></div></div>
+        )}
+        {communityGalleryItems.length > 1 && <SwiperControls carousel={communityCarousel} count={communityGalleryItems.length} label={language === 'ta' ? 'சமூகப் புகைப்படங்கள்' : 'Community photos'} />}
       </section>
 
       {/* Urgent Emergency Banner (Matches reference landing page CTA) */}

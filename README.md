@@ -32,3 +32,15 @@ Homepage text, section visibility, images, contacts, and social links are read f
 The public page includes a bilingual Quick Access section. Become a Donor, Find Blood, Request Blood, and Camps & Events each open their own public page, where visitors can submit opt-in donor details or a blood request and browse public donor, request, and event records. Admin record editing remains protected by the coordinator passcode at `/admin`.
 
 Upcoming events are read from MongoDB and published when their CRM status is `Upcoming` and their date is current or future.
+
+## Deploying to Vercel with MongoDB
+
+The Vercel frontend and Express/MongoDB API are separate services. Vercel does not start `backend/server.js` when it builds the Next.js app. Deploy the API first from this repository using the included `render.yaml` Blueprint, then add these environment variables to the API service:
+
+- `MONGODB_URI`: your MongoDB Atlas connection string. In Atlas, allow connections from the API host (for Render, use `0.0.0.0/0` in Network Access if you need a stable allow-list-free setup; protect the database with a strong database user and password).
+- `ADMIN_PASSCODE`: your private CRM passcode.
+- `CLIENT_ORIGIN`: the public Vercel site URL. The Blueprint is prefilled with `https://blood-donation-ten-delta.vercel.app`; update it if your domain differs. Multiple exact origins can be comma-separated.
+
+After the API is live, open its `/api/health` URL and confirm `database` is `connected`. In the Vercel project, set `API_ORIGIN` to the API's full public origin, such as `https://poongurichi-blood-network-api.onrender.com` (no `/api` suffix), for Production and Preview as needed. Set the Vercel project's Root Directory to `frontend`, keep Install Command as `npm install`, and Build Command as `npm run build`. Redeploy after saving the environment variable. A production build now fails with a clear configuration message if `API_ORIGIN` is missing instead of silently publishing a page that cannot load its content.
+
+Once both services are deployed, check `https://your-site/api/health` through the Vercel domain and confirm `database` is `connected`; then open the public homepage and `/admin`.
