@@ -1,0 +1,12 @@
+<svg width="140" height="140" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="140" height="140" rx="36" fill="#F8FAFC"/>
+  <!-- Glowing drop container -->
+  <circle cx="70" cy="70" r="48" fill="#FEE2E2"/>
+  <circle cx="70" cy="70" r="36" fill="#FECDD3"/>
+  <!-- Bold crisp blood drop -->
+  <path d="M70 42C70 42 50 62 50 74C50 85 59 94 70 94C81 94 90 85 90 74C90 62 70 42 70 42Z" fill="#E11D48"/>
+  <!-- Specular highlight -->
+  <path d="M63 68C61 71 60 74 61 77" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+  <!-- Medical cross -->
+  <path d="M70 68V80M64 74H76" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,10 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="60" cy="60" r="54" fill="#FEF2F2" stroke="#FEE2E2" stroke-width="2"/>
+  <circle cx="60" cy="60" r="42" fill="#FEE2E2"/>
+  <!-- User silhouette -->
+  <circle cx="60" cy="46" r="14" fill="#E11D48"/>
+  <path d="M38 78C38 67 47 62 60 62C73 62 82 67 82 78V84H38V78Z" fill="#E11D48"/>
+  <!-- Plus / badge icon -->
+  <circle cx="78" cy="42" r="10" fill="#059669" stroke="#FFFFFF" stroke-width="2"/>
+  <path d="M78 37V47M73 42H83" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

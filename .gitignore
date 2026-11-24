@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.next/
+.next-*/
+frontend/.next-*/
+.env
+.DS_Store

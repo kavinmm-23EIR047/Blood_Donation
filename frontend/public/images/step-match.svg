@@ -1,0 +1,9 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="60" cy="60" r="54" fill="#EFF6FF" stroke="#DBEAFE" stroke-width="2"/>
+  <circle cx="60" cy="60" r="42" fill="#DBEAFE"/>
+  <!-- Search magnifying glass & drop -->
+  <circle cx="54" cy="54" r="18" fill="#FFFFFF" stroke="#2563EB" stroke-width="3"/>
+  <path d="M68 68L84 84" stroke="#2563EB" stroke-width="4" stroke-linecap="round"/>
+  <!-- Centered blood drop inside glass -->
+  <path d="M54 44C54 44 47 52 47 56C47 60 50 63 54 63C58 63 61 60 61 56C61 52 54 44 54 44Z" fill="#E11D48"/>
+</svg>
